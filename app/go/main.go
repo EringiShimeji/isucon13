@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/labstack/echo/v4"
 	"log"
 	"net"
 	"net/http"
@@ -14,10 +15,10 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/gorilla/sessions"
+	pprotein "github.com/kaz/pprotein/integration/echov4"
 	"github.com/labstack/echo-contrib/session"
 	echolog "github.com/labstack/gommon/log"
 )
@@ -199,6 +200,8 @@ func main() {
 		os.Exit(1)
 	}
 	powerDNSSubdomainAddress = subdomainAddr
+
+	pprotein.Integrate(e)
 
 	// HTTPサーバ起動
 	listenAddr := net.JoinHostPort("", strconv.Itoa(listenPort))
