@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -104,8 +105,11 @@ func getIconHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
 	}
 
-	var image []byte
-	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
+	var r struct {
+		image []byte
+		hash  string
+	}
+	if err := tx.GetContext(ctx, &r, "SELECT image, hash FROM icons WHERE user_id = ?", user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.File(fallbackImage)
 		} else {
@@ -113,7 +117,13 @@ func getIconHandler(c echo.Context) error {
 		}
 	}
 
-	return c.Blob(http.StatusOK, "image/jpeg", image)
+	hashGivenStr := c.Request().Header.Get("If-None-Match")
+	hashGiven := hashGivenStr[1 : len(hashGivenStr)-1]
+	if len(r.hash) != 0 && hashGiven == r.hash {
+		return c.NoContent(http.StatusNotModified)
+	}
+
+	return c.Blob(http.StatusOK, "image/jpeg", r.image)
 }
 
 func postIconHandler(c echo.Context) error {
@@ -144,7 +154,10 @@ func postIconHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old user icon: "+err.Error())
 	}
 
-	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, image) VALUES (?, ?)", userID, req.Image)
+	raw := sha256.Sum256(req.Image)
+	hash := hex.EncodeToString(raw[:])
+
+	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, image, hash) VALUES (?, ?, ?)", userID, req.Image, hash)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert new user icon: "+err.Error())
 	}
