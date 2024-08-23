@@ -5,13 +5,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
+
+	"github.com/labstack/echo/v4"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -118,6 +119,8 @@ func initializeHandler(c echo.Context) error {
 			log.Println("failed to request to pprotein")
 		}
 	}()
+
+	InitCache()
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
