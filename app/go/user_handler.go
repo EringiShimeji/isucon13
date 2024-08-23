@@ -107,8 +107,8 @@ func getIconHandler(c echo.Context) error {
 	}
 
 	var r struct {
-		image []byte
-		hash  string
+		Image []byte
+		Hash  string
 	}
 	if err := tx.GetContext(ctx, &r, "SELECT image, hash FROM icons WHERE user_id = ?", user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -121,11 +121,11 @@ func getIconHandler(c echo.Context) error {
 	hashGivenStr := c.Request().Header.Get("If-None-Match")
 	hashGiven := strings.Trim(hashGivenStr, "\"")
 
-	if len(hashGiven) != 0 && hashGiven == r.hash {
+	if len(hashGiven) != 0 && hashGiven == r.Hash {
 		return c.NoContent(http.StatusNotModified)
 	}
 
-	return c.Blob(http.StatusOK, "image/jpeg", r.image)
+	return c.Blob(http.StatusOK, "image/jpeg", r.Image)
 }
 
 func postIconHandler(c echo.Context) error {
