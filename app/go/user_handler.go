@@ -419,12 +419,9 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 	}
 
 	hash, ok := cache.userIdHash.Load(userModel.ID)
-	if !ok {
+	if hash == nil || !ok {
 		var image []byte
 		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return User{}, nil
-			}
 			return User{}, err
 		}
 
