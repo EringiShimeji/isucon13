@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -118,8 +119,9 @@ func getIconHandler(c echo.Context) error {
 	}
 
 	hashGivenStr := c.Request().Header.Get("If-None-Match")
-	hashGiven := hashGivenStr[1 : len(hashGivenStr)-1]
-	if len(r.hash) != 0 && hashGiven == r.hash {
+	hashGiven := strings.Trim(hashGivenStr, "\"")
+
+	if len(hashGiven) != 0 && hashGiven == r.hash {
 		return c.NoContent(http.StatusNotModified)
 	}
 
