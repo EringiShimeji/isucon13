@@ -1,0 +1,204 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+# https://taskfile.dev
+version: "3"
+
+vars:
+  # Frequently changed
+  REPO_DIR: /home/isucon/repo
+  WEBAPP_DIR: /home/isucon/webapp
+  COLLECT_TARGET: >-
+    /home/isucon/env.sh
+    /etc/mysql
+    /etc/nginx
+    /etc/sysctl.d
+  COLLECT_TARGET_SERVICE: mysql nginx
+
+  # Rarely changed
+  CMD_INSTALL_DIR: /usr/local/bin
+  PPROTEIN_CONFIG_DIR: /etc/pprotein
+
+tasks:
+  ####################
+  #      Setup       #
+  ####################
+  all:
+    desc: Run all setup tasks
+    deps:
+      - enable-autocompletion
+      - gitconfig
+      - taskfile-symlink
+    cmds:
+      - task: install-tools
+      - task: import-webapp
+      - task: collect-config
+
+  install-tools:
+    desc: Install all tools
+    cmds:
+      - sudo apt-get -q update && sudo apt-get install -q -y tree jq graphviz wget watch
+      - task: install-bottom
+      - task: install-bottom-config
+      - task: install-pprotein
+      - task: install-pprotein-service
+      - task: install-pprotein-config
+
+  collect-config:
+    desc: Collect system configuration files under the repository
+    vars:
+      SERVICE_FILES:
+        sh: |
+          for service_name in {{.COLLECT_TARGET_SERVICE}}; do
+            sudo systemctl show --value -p FragmentPath "$service_name"
+          done | tr -s '\n' ' '
+    cmds:
+      - ./assets/collect_config.sh {{.COLLECT_TARGET}} {{.SERVICE_FILES}}
+
+  import-webapp:
+    desc: Move webapp directory under the repository
+    cmds:
+      - sudo cp -au "{{.WEBAPP_DIR}}/." {{.REPO_DIR}}/app
+      - mv "{{.WEBAPP_DIR}}" "{{.WEBAPP_DIR}}.bak"
+      - ln -s {{.REPO_DIR}}/app "{{.WEBAPP_DIR}}"
+      - task: gitignore-large-webapp-files
+    status:
+      - test -L "{{.WEBAPP_DIR}}"
+      - test -d "{{.WEBAPP_DIR}}"
+
+  enable-autocompletion:
+    desc: Enable autocompletion for task command
+    vars:
+      COMPLETION_FILE_URL: https://raw.githubusercontent.com/go-task/task/main/completion/bash/task.bash
+    cmds:
+      - sudo wget -qO /etc/bash_completion.d/task.bash {{.COMPLETION_FILE_URL}}
+    status:
+      - test -f /etc/bash_completion.d/task.bash
+
+  ####################
+  #     Utility      #
+  ####################
+  hostname:
+    desc: Set hostname
+    cmds:
+      - sudo hostnamectl set-hostname {{.CLI_ARGS}}
+      - sudo tee -a /etc/hosts <<< "127.0.0.1 {{.CLI_ARGS}}" > /dev/null
+    status:
+      - test "$(hostname)" = "{{.CLI_ARGS}}"
+
+  ####################
+  #     Internal     #
+  ####################
+  taskfile-symlink:
+    internal: true
+    cmds:
+      - ln -s {{.REPO_DIR}}/Taskfile.yml ~/Taskfile.yml
+    status:
+      - test -L ~/Taskfile.yml
+
+  gitconfig:
+    internal: true
+    cmds:
+      - git config --global user.name "$(hostname)"
+      - git config --global user.email "$(hostname)@example.com"
+      - git config --global core.editor vim
+      - git config --global pull.rebase true
+    status:
+      - git config --global --get user.name
+      - git config --global --get user.email
+      - git config --global --get core.editor
+
+  gitignore-large-webapp-files:
+    internal: true
+    dir: ./app
+    cmds:
+      - find . -type f -size +100M 2> /dev/null >> .gitignore
+
+  install-pprotein:
+    internal: true
+    vars:
+      PPROTEIN_VERSION: "1.2.3"
+      ALP_VERSION: "1.0.21"
+      SLP_VERSION: "0.2.1"
+      PPROTEIN_DOWNLOAD_URL: https://github.com/kaz/pprotein/releases/download/v{{.PPROTEIN_VERSION}}/pprotein_{{.PPROTEIN_VERSION}}_linux_amd64.tar.gz
+      ALP_DOWNLOAD_URL: https://github.com/tkuchiki/alp/releases/download/v{{.ALP_VERSION}}/alp_linux_amd64.tar.gz
+      SLP_DOWNLOAD_URL: https://github.com/tkuchiki/slp/releases/download/v{{.SLP_VERSION}}/slp_linux_amd64.tar.gz
+    dir: /tmp/install-pprotein
+    cmds:
+      - curl -sL {{.PPROTEIN_DOWNLOAD_URL}} | tar xz
+      - curl -sL {{.ALP_DOWNLOAD_URL}} | tar xz
+      - curl -sL {{.SLP_DOWNLOAD_URL}} | tar xz
+      - sudo install -Cv ./pprotein ./pprotein-agent ./alp ./slp {{.CMD_INSTALL_DIR}}
+    status:
+      - test -f {{.CMD_INSTALL_DIR}}/pprotein
+      - test -f {{.CMD_INSTALL_DIR}}/pprotein-agent
+      - test -f {{.CMD_INSTALL_DIR}}/alp
+      - test -f {{.CMD_INSTALL_DIR}}/slp
+
+  install-pprotein-service:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        sudo tee /etc/systemd/system/pprotein.service << EOF > /dev/null && \
+        echo "/etc/systemd/system/pprotein.service created successfully"
+        [Unit]
+        Description=pprotein
+        After=network.target
+
+        [Service]
+        ExecStart={{.CMD_INSTALL_DIR}}/pprotein
+        WorkingDirectory={{.PPROTEIN_CONFIG_DIR}}
+        Restart=always
+
+        [Install]
+        WantedBy=multi-user.target
+        EOF
+      - |
+        sudo tee /etc/systemd/system/pprotein-agent.service << EOF > /dev/null && \
+        echo "/etc/systemd/system/pprotein-agent.service created successfully"
+        [Unit]
+        Description=pprotein-agent
+        After=network.target
+
+        [Service]
+        ExecStart={{.CMD_INSTALL_DIR}}/pprotein-agent
+        Environment=PPROTEIN_GIT_REPOSITORY={{.REPO_DIR}}
+        Restart=always
+
+        [Install]
+        WantedBy=multi-user.target
+        EOF
+      - sudo systemctl daemon-reload
+    status:
+      - test -f /etc/systemd/system/pprotein.service
+      - test -f /etc/systemd/system/pprotein-agent.service
+
+  install-pprotein-config:
+    internal: true
+    cmds:
+      - sudo mkdir -p {{.PPROTEIN_CONFIG_DIR}}/data
+      - sudo install -Cv -m 0644 ./assets/config/targets.json ./assets/config/alp.yml ./assets/config/slp.yml {{.PPROTEIN_CONFIG_DIR}}/data
+    status:
+      - test -f {{.PPROTEIN_CONFIG_DIR}}/data/targets.json
+      - test -f {{.PPROTEIN_CONFIG_DIR}}/data/alp.yml
+      - test -f {{.PPROTEIN_CONFIG_DIR}}/data/slp.yml
+
+  install-bottom:
+    internal: true
+    vars:
+      BOTTOM_VERSION: "0.9.6"
+      BOTTOM_DOWNLOAD_URL: https://github.com/ClementTsang/bottom/releases/download/{{.BOTTOM_VERSION}}/bottom_{{.BOTTOM_VERSION}}_amd64.deb
+    dir: /tmp
+    cmds:
+      - wget -qO bottom.deb {{.BOTTOM_DOWNLOAD_URL}}
+      - sudo dpkg -i bottom.deb
+    status:
+      - dpkg -l | grep bottom
+
+  install-bottom-config:
+    internal: true
+    cmds:
+      - mkdir -p ~/.config/bottom
+      - cp ./assets/config/bottom.toml ~/.config/bottom/bottom.toml
+    status:
+      - diff ./assets/config/bottom.toml ~/.config/bottom/bottom.toml &> /dev/null
+
