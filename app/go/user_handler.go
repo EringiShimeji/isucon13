@@ -422,7 +422,21 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 	if hash == nil || !ok {
 		var image []byte
 		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
-			return User{}, err
+			if !errors.Is(err, sql.ErrNoRows) {
+				return User{}, err
+			}
+
+			return User{
+				ID:          userModel.ID,
+				Name:        userModel.Name,
+				DisplayName: userModel.DisplayName,
+				Description: userModel.Description,
+				Theme: Theme{
+					ID:       themeModel.ID,
+					DarkMode: themeModel.DarkMode,
+				},
+				IconHash: "",
+			}, nil
 		}
 
 		raw := sha256.Sum256(image)
