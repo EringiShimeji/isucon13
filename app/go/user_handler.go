@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -433,6 +434,8 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 			cache.userIdHash.Store(userModel.ID, hash)
 		}
 	}
+
+	log.Println(hash)
 
 	user := User{
 		ID:          userModel.ID,
