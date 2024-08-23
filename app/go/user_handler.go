@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -155,9 +154,9 @@ func postIconHandler(c echo.Context) error {
 	}
 
 	raw := sha256.Sum256(req.Image)
-	hash := hex.EncodeToString(raw[:])
+	hash := fmt.Sprintf("%x", raw)
 
-	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, image, hash) VALUES (?, ?, ?)", userID, req.Image, hash)
+	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, image) VALUES (?, ?, ?)", userID, req.Image)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert new user icon: "+err.Error())
 	}
@@ -419,11 +418,19 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		return User{}, err
 	}
 
-	var hash string
-	if err := tx.GetContext(ctx, &hash, "SELECT hash FROM icons WHERE user_id = ?", userModel.ID); err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
+	hash, ok := cache.userIdHash.Load(userModel.ID)
+	if !ok {
+		var image []byte
+		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return User{}, nil
+			}
 			return User{}, err
 		}
+
+		raw := sha256.Sum256(image)
+		hash = fmt.Sprintf("%x", raw)
+		cache.userIdHash.Store(userModel.ID, hash)
 	}
 
 	user := User{
@@ -435,7 +442,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 			ID:       themeModel.ID,
 			DarkMode: themeModel.DarkMode,
 		},
-		IconHash: fmt.Sprintf("%x", hash),
+		IconHash: hash.(string),
 	}
 
 	return user, nil
