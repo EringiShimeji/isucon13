@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -29,7 +28,9 @@ const (
 	bcryptDefaultCost        = bcrypt.MinCost
 )
 
-var fallbackImage = "../img/NoImage.jpg"
+const fallbackImage = "../img/NoImage.jpg"
+
+const fallbackImageHash = "d9f8294e9d895f81ce62e73dc7d5dff862a4fa40bd4e0fecf53f7526a8edcac0"
 
 type UserModel struct {
 	ID             int64  `db:"id"`
@@ -427,14 +428,12 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 				return User{}, err
 			}
 
-			image, err = os.ReadFile(fallbackImage)
-			if err != nil {
-				return User{}, err
-			}
+			hash = fallbackImageHash
+		} else {
+			raw := sha256.Sum256(image)
+			hash = fmt.Sprintf("%x", raw)
+			cache.userIdHash.Store(userModel.ID, hash)
 		}
-		raw := sha256.Sum256(image)
-		hash = fmt.Sprintf("%x", raw)
-		cache.userIdHash.Store(userModel.ID, hash)
 	}
 
 	user := User{
