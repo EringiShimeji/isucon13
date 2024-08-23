@@ -426,22 +426,12 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 				return User{}, err
 			}
 
-			return User{
-				ID:          userModel.ID,
-				Name:        userModel.Name,
-				DisplayName: userModel.DisplayName,
-				Description: userModel.Description,
-				Theme: Theme{
-					ID:       themeModel.ID,
-					DarkMode: themeModel.DarkMode,
-				},
-				IconHash: "",
-			}, nil
+			hash = fmt.Sprintf("%x", "")
+		} else {
+			raw := sha256.Sum256(image)
+			hash = fmt.Sprintf("%x", raw)
+			cache.userIdHash.Store(userModel.ID, hash)
 		}
-
-		raw := sha256.Sum256(image)
-		hash = fmt.Sprintf("%x", raw)
-		cache.userIdHash.Store(userModel.ID, hash)
 	}
 
 	user := User{
