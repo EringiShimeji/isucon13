@@ -435,7 +435,10 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		}
 	}
 
+	var emptyStr string
+
 	log.Println(hash)
+	log.Println(emptyStr)
 
 	user := User{
 		ID:          userModel.ID,
