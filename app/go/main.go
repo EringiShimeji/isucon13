@@ -203,6 +203,12 @@ func main() {
 
 	pprotein.Integrate(e)
 
+	go func() {
+		if _, err := http.Get("http://localhost:9000/api/group/collect"); err != nil {
+			log.Println("failed to request to pprotein")
+		}
+	}()
+
 	// HTTPサーバ起動
 	listenAddr := net.JoinHostPort("", strconv.Itoa(listenPort))
 	if err := e.Start(listenAddr); err != nil {
