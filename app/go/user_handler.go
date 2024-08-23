@@ -438,8 +438,6 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		cache.userIdHash.Store(userModel.ID, hash)
 	}
 
-	log.Println(hash)
-
 	user := User{
 		ID:          userModel.ID,
 		Name:        userModel.Name,
@@ -451,7 +449,6 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		},
 		IconHash: hash.(string),
 	}
-	log.Println(user.IconHash)
 
 	return user, nil
 }
