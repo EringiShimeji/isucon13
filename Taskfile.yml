@@ -4,9 +4,9 @@ version: "3"
 
 vars:
   # Frequently changed
-  SERVICES: mysql nginx
+  SERVICES: mysql nginx isupipe-go
   REPO_DIR: /home/isucon/repo
-  SRC_DIR: /home/isucon/repo/app/rust
+  SRC_DIR: /home/isucon/repo/app/go
 
   # Rarely changed
 
