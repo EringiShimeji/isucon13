@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -427,12 +428,14 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 				return User{}, err
 			}
 
-			hash = fmt.Sprintf("%x", "")
-		} else {
-			raw := sha256.Sum256(image)
-			hash = fmt.Sprintf("%x", raw)
-			cache.userIdHash.Store(userModel.ID, hash)
+			image, err = os.ReadFile(fallbackImage)
+			if err != nil {
+				return User{}, err
+			}
 		}
+		raw := sha256.Sum256(image)
+		hash = fmt.Sprintf("%x", raw)
+		cache.userIdHash.Store(userModel.ID, hash)
 	}
 
 	log.Println(hash)
