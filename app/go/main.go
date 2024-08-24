@@ -4,6 +4,7 @@ package main
 // sqlx的な参考: https://jmoiron.github.io/sqlx/
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net"
@@ -113,6 +114,13 @@ func initializeHandler(c echo.Context) error {
 		c.Logger().Warnf("init.sh failed with err=%s", string(out))
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
+
+	fallbackImageRaw, err := os.ReadFile(fallbackImage)
+	if err != nil {
+		c.Logger().Warnf("init.sh failed with err=%s", err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
+	}
+	fallbackImageHash = sha256.Sum256(fallbackImageRaw)
 
 	go func() {
 		if _, err := http.Get("http://localhost:9000/api/group/collect"); err != nil {
