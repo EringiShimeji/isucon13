@@ -16,7 +16,8 @@ DROP TABLE IF EXISTS `icons`;
 CREATE TABLE `icons` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `user_id` BIGINT NOT NULL,
-  `image` LONGBLOB NOT NULL
+  `image` LONGBLOB NOT NULL,
+  INDEX `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 
 -- ユーザごとのカスタムテーマ
