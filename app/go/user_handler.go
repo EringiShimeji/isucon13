@@ -30,7 +30,7 @@ const (
 
 const fallbackImage = "../img/NoImage.jpg"
 
-var fallbackImageHash [32]byte
+var fallbackImageHash string
 
 type UserModel struct {
 	ID             int64  `db:"id"`

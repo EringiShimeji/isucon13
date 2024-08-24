@@ -120,7 +120,7 @@ func initializeHandler(c echo.Context) error {
 		c.Logger().Warnf("init.sh failed with err=%s", err.Error())
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
-	fallbackImageHash = sha256.Sum256(fallbackImageRaw)
+	fallbackImageHash = fmt.Sprintf("%x", sha256.Sum256(fallbackImageRaw))
 
 	go func() {
 		if _, err := http.Get("http://localhost:9000/api/group/collect"); err != nil {
