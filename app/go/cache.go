@@ -3,7 +3,7 @@ package main
 import "sync"
 
 type Cache struct {
-	userIdHash sync.Map
+	usernameHash sync.Map
 }
 
 var cache Cache

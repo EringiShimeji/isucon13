@@ -92,6 +92,15 @@ func getIconHandler(c echo.Context) error {
 
 	username := c.Param("username")
 
+	if hash, ok := cache.usernameHash.Load(username); ok {
+		hashGivenStr := c.Request().Header.Get("If-None-Match")
+		hashGiven := strings.Trim(hashGivenStr, "\"")
+
+		if len(hashGiven) != 0 && hashGiven == hash {
+			return c.NoContent(http.StatusNotModified)
+		}
+	}
+
 	tx, err := dbConn.BeginTxx(ctx, nil)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
@@ -104,15 +113,6 @@ func getIconHandler(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
-	}
-
-	if hash, ok := cache.userIdHash.Load(userID); ok {
-		hashGivenStr := c.Request().Header.Get("If-None-Match")
-		hashGiven := strings.Trim(hashGivenStr, "\"")
-
-		if len(hashGiven) != 0 && hashGiven == hash {
-			return c.NoContent(http.StatusNotModified)
-		}
 	}
 
 	var image []byte
@@ -151,14 +151,7 @@ func postIconHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.ExecContext(ctx, "DELETE FROM icons WHERE user_id = ?", userID); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old user icon: "+err.Error())
-	}
-
-	raw := sha256.Sum256(req.Image)
-	hash := fmt.Sprintf("%x", raw)
-
-	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, image) VALUES (?, ?)", userID, req.Image)
+	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, image) VALUES (?, ?) ON DUPLICATE KEY UPDATE image=?", userID, req.Image, req.Image)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert new user icon: "+err.Error())
 	}
@@ -172,7 +165,11 @@ func postIconHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
-	cache.userIdHash.Store(userID, hash)
+	raw := sha256.Sum256(req.Image)
+	hash := fmt.Sprintf("%x", raw)
+
+	username := sess.Values[defaultUsernameKey].(int64)
+	cache.usernameHash.Store(username, hash)
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
 		ID: iconID,
@@ -420,7 +417,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		return User{}, err
 	}
 
-	hash, ok := cache.userIdHash.Load(userModel.ID)
+	hash, ok := cache.usernameHash.Load(userModel.ID)
 	if hash == nil || !ok {
 		var image []byte
 		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
@@ -432,7 +429,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		} else {
 			raw := sha256.Sum256(image)
 			hash = fmt.Sprintf("%x", raw)
-			cache.userIdHash.Store(userModel.ID, hash)
+			cache.usernameHash.Store(userModel.ID, hash)
 		}
 	}
 
