@@ -168,7 +168,7 @@ func postIconHandler(c echo.Context) error {
 	raw := sha256.Sum256(req.Image)
 	hash := fmt.Sprintf("%x", raw)
 
-	username := sess.Values[defaultUsernameKey].(int64)
+	username := sess.Values[defaultUsernameKey].(string)
 	cache.usernameHash.Store(username, hash)
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
