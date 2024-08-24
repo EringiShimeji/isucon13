@@ -49,7 +49,7 @@ CREATE TABLE `reservation_slots` (
   `slot` BIGINT NOT NULL,
   `start_at` BIGINT NOT NULL,
   `end_at` BIGINT NOT NULL,
-  INDEX `idx_start_at_end_at` (`start_at`, `end_at`)
+  INDEX `idx_start_at` (`start_at`)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 
 -- ライブストリームに付与される、サービスで定義されたタグ
