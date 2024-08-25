@@ -63,18 +63,18 @@ func (r UserRanking) Less(i, j int) bool {
 func getUserRank(ctx context.Context, tx *sqlx.Tx, username string) (int64, error) {
 	var rank int64 = 1
 	if err := tx.GetContext(ctx, &rank, `
-		WITH ranked AS (
+		WITH scored AS (
 			SELECT
 				u.name AS name,
-				ROW_NUMBER() OVER (ORDER BY COUNT(r.id) + IFNULL(SUM(lc.tip), 0) DESC, u.name DESC) AS rnk
+				COUNT(r.id) + IFNULL(SUM(lc.tip), 0) AS score
 			FROM users u
 			LEFT JOIN livestreams l ON u.id = l.user_id
 			LEFT JOIN reactions r ON l.id = r.livestream_id
 			LEFT JOIN livecomments lc ON l.id = lc.livestream_id
 			GROUP BY u.id
 		)
-		SELECT rnk
-		FROM ranked
+		SELECT ROW_NUMBER() OVER (ORDER BY score DESC, name DESC) AS rnk
+		FROM scored
 		WHERE name = ?
 	`, username); err != nil {
 		return 0, err
@@ -187,17 +187,17 @@ func getUserStatisticsHandler(c echo.Context) error {
 func getLivestreamRank(ctx context.Context, tx *sqlx.Tx, livestreamID int64) (int64, error) {
 	var rank int64 = 1
 	if err := tx.GetContext(ctx, &rank, `
-		WITH ranked AS (
+		WITH scored AS (
 			SELECT
 				l.id AS id,
-				ROW_NUMBER() OVER (ORDER BY COUNT(r.id) + IFNULL(SUM(lc.tip), 0) DESC, id DESC) AS rnk
+				COUNT(r.id) + IFNULL(SUM(lc.tip), 0) AS score
 			FROM livestreams l
 			LEFT JOIN reactions r ON l.id = r.livestream_id
 			LEFT JOIN livecomments lc ON l.id = lc.livestream_id
 			GROUP BY l.id
 		)
-		SELECT rnk
-		FROM ranked
+		SELECT ROW_NUMBER() OVER (ORDER BY score DESC, id DESC) AS rnk
+		FROM scored
 		WHERE id = ?
 	`, livestreamID); err != nil {
 		return 0, err
