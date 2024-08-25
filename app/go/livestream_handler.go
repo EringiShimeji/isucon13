@@ -481,12 +481,12 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 	ownerModel, _ := cache.getUserModel(livestreamModel.UserID)
 	owner, err := fillUserResponse(ctx, tx, ownerModel)
 	if err != nil {
-		return Livestream{}, err
+		return Livestream{}, fmt.Errorf("error occured in fillUserResponse: %s", err.Error())
 	}
 
 	tags, err := getLivestreamTags(ctx, tx, livestreamModel.ID)
 	if err != nil {
-		return Livestream{}, err
+		return Livestream{}, fmt.Errorf("error occured in getLivestreamTags: %s", err.Error())
 	}
 
 	livestream := Livestream{
