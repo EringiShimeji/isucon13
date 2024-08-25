@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -504,6 +505,8 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 	`, livestreamModel.ID); err != nil {
 		return Livestream{}, err
 	}
+
+	log.Println("tags", tags)
 
 	livestream := Livestream{
 		ID:           livestreamModel.ID,
