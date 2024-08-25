@@ -72,7 +72,7 @@ func getUserRank(ctx context.Context, tx *sqlx.Tx, username string) (int64, erro
 			LEFT JOIN livestreams l ON u.id = l.user_id
 			LEFT JOIN reactions r ON l.id = r.livestream_id
 			LEFT JOIN livecomments lc ON l.id = lc.livestream_id
-			GROUP BY l.id
+			GROUP BY l.id, u.name
 		) AS ranked
 		WHERE name = ?
 	`, username); err != nil {
