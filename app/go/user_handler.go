@@ -282,6 +282,8 @@ func registerHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
+	cache.userTheme.Store(user.ID, user.Theme)
+
 	return c.JSON(http.StatusCreated, user)
 }
 
@@ -412,10 +414,7 @@ func verifyUserSession(c echo.Context) error {
 }
 
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
-	themeModel := ThemeModel{}
-	if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
-		return User{}, err
-	}
+	theme, _ := cache.userTheme.Load(userModel.ID)
 
 	hash, ok := cache.usernameHash.Load(userModel.ID)
 	if hash == nil || !ok {
@@ -438,11 +437,8 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		Name:        userModel.Name,
 		DisplayName: userModel.DisplayName,
 		Description: userModel.Description,
-		Theme: Theme{
-			ID:       themeModel.ID,
-			DarkMode: themeModel.DarkMode,
-		},
-		IconHash: hash.(string),
+		Theme:       theme.(Theme),
+		IconHash:    hash.(string),
 	}
 
 	return user, nil
