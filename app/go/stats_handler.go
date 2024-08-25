@@ -189,14 +189,13 @@ func getLivestreamRank(ctx context.Context, tx *sqlx.Tx, livestreamID int64) (in
 	if err := tx.GetContext(ctx, &rank, `
 		SELECT rnk
 		FROM (
-			SELECT id, ROW_NUMBER() OVER (ORDER BY score DESC, id DESC) AS rnk
-			FROM (
-				SELECT l.id AS id, COUNT(r.id) + IFNULL(SUM(lc.tip), 0) AS score
-				FROM livestreams l
-				LEFT JOIN reactions r ON l.id = r.livestream_id
-				LEFT JOIN livecomments lc ON l.id = lc.livestream_id
-				GROUP BY l.id
-			) AS scored
+			SELECT
+				l.id AS id,
+				ROW_NUMBER() OVER (ORDER BY COUNT(r.id) + IFNULL(SUM(lc.tip), 0) DESC, id DESC) AS rnk
+			FROM livestreams l
+			LEFT JOIN reactions r ON l.id = r.livestream_id
+			LEFT JOIN livecomments lc ON l.id = lc.livestream_id
+			GROUP BY l.id
 		) AS ranked
 		WHERE id = ?
 	`, livestreamID); err != nil {
