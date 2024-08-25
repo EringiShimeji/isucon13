@@ -38,5 +38,14 @@ func InitCache() error {
 	for _, model := range userModels {
 		cache.userModel.Store(model.ID, model)
 	}
+
+	var livestreamModels []LivestreamModel
+	if err := dbConn.Select(&userModels, "SELECT * FROM livestreams"); err != nil {
+		return err
+	}
+	for _, model := range livestreamModels {
+		cache.livestreamModel.Store(model.ID, model)
+	}
+
 	return nil
 }
