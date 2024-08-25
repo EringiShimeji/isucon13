@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/jmoiron/sqlx"
 	"net/http"
-	"sort"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -70,7 +69,7 @@ func getUserRank(ctx context.Context, tx *sqlx.Tx, username string) (int64, erro
 			FROM (
 				SELECT u.name AS na, COUNT(r.id) + IFNULL(SUM(l2.tip), 0) AS s
 				FROM users u
-				LEFT JOIN livestreams l on u.id = l.user_id
+				LEFT JOIN livestreams l ON u.id = l.user_id
 				LEFT JOIN reactions r ON l.id = r.livestream_id
 				LEFT JOIN livecomments l2 ON l.id = l2.livestream_id
 				GROUP BY u.id
@@ -82,7 +81,6 @@ func getUserRank(ctx context.Context, tx *sqlx.Tx, username string) (int64, erro
 	}
 
 	return rank, nil
-	}
 }
 
 func getUserStatisticsHandler(c echo.Context) error {
