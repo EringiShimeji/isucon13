@@ -11,6 +11,7 @@ vars:
     /etc/mysql
     /etc/nginx
     /etc/sysctl.d
+    /etc/powerdns
   COLLECT_TARGET_SERVICE: mysql nginx isupipe-go pdns
 
   # Rarely changed
