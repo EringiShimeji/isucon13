@@ -67,7 +67,8 @@ CREATE TABLE `livestream_tags` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `livestream_id` BIGINT NOT NULL,
   `tag_id` BIGINT NOT NULL,
-  INDEX `idx_livestream_id` (`livestream_id`)
+  INDEX `idx_livestream_id` (`livestream_id`),
+  INDEX `idx_tag_id_livestream_id` (`tag_id`, `livestream_id`)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 
 -- ライブ配信視聴履歴
@@ -108,7 +109,8 @@ CREATE TABLE `ng_words` (
   `user_id` BIGINT NOT NULL,
   `livestream_id` BIGINT NOT NULL,
   `word` VARCHAR(255) NOT NULL,
-  `created_at` BIGINT NOT NULL
+  `created_at` BIGINT NOT NULL,
+  INDEX `idx_livestream_id_user_id_created_at` (`livestream_id`, `user_id`, `created_at`)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 CREATE INDEX ng_words_word ON ng_words(`word`);
 
@@ -121,5 +123,6 @@ CREATE TABLE `reactions` (
   -- :innocent:, :tada:, etc...
   `emoji_name` VARCHAR(255) NOT NULL,
   `created_at` BIGINT NOT NULL,
-  INDEX `idx_livestream_id` (`livestream_id`)
+  INDEX `idx_livestream_id` (`livestream_id`),
+  INDEX `idx_emoji_name` (`emoji_name`)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
