@@ -63,19 +63,18 @@ func (r UserRanking) Less(i, j int) bool {
 func getUserRank(ctx context.Context, tx *sqlx.Tx, username string) (int64, error) {
 	var rank int64 = 1
 	if err := tx.GetContext(ctx, &rank, `
-		SELECT s2.n
+		SELECT rnk
 		FROM (
-			SELECT s1.na AS na, ROW_NUMBER() OVER (ORDER BY s1.s DESC, s1.na DESC) AS n, s1.s AS s
-			FROM (
-				SELECT u.name AS na, COUNT(r.id) + IFNULL(SUM(l2.tip), 0) AS s
-				FROM users u
-				LEFT JOIN livestreams l ON u.id = l.user_id
-				LEFT JOIN reactions r ON l.id = r.livestream_id
-				LEFT JOIN livecomments l2 ON l.id = l2.livestream_id
-				GROUP BY u.id
-			) AS s1
-		) AS s2
-		WHERE s2.na = ?
+			SELECT
+				u.name AS name,
+				ROW_NUMBER() OVER (ORDER BY COUNT(r.id) + IFNULL(SUM(lc.tip), 0) DESC, u.name DESC) AS rnk
+			FROM users u
+			LEFT JOIN livestreams l ON u.id = l.user_id
+			LEFT JOIN reactions r ON l.id = r.livestream_id
+			LEFT JOIN livecomments lc ON l.id = lc.livestream_id
+			GROUP BY l.id
+		) AS ranked
+		WHERE name = ?
 	`, username); err != nil {
 		return 0, err
 	}
