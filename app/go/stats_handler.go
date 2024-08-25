@@ -62,51 +62,27 @@ func (r UserRanking) Less(i, j int) bool {
 }
 
 func getUserRank(ctx context.Context, tx *sqlx.Tx, username string) (int64, error) {
-	var users []*UserModel
-	if err := tx.SelectContext(ctx, &users, "SELECT * FROM users"); err != nil {
+	var rank int64 = 1
+	if err := tx.GetContext(ctx, &rank, `
+		SELECT s2.n
+		FROM (
+			SELECT s1.na AS na, ROW_NUMBER() OVER (ORDER BY s1.s DESC, s1.na DESC) AS n, s1.s AS s
+			FROM (
+				SELECT u.name AS na, COUNT(r.id) + IFNULL(SUM(l2.tip), 0) AS s
+				FROM users u
+				LEFT JOIN livestreams l on u.id = l.user_id
+				LEFT JOIN reactions r ON l.id = r.livestream_id
+				LEFT JOIN livecomments l2 ON l.id = l2.livestream_id
+				GROUP BY u.id
+			) AS s1
+		) AS s2
+		WHERE s2.na = ?
+	`, username); err != nil {
 		return 0, err
 	}
 
-	var ranking UserRanking
-	for _, user := range users {
-		var reactions int64
-		query := `
-		SELECT COUNT(*) FROM users u
-		INNER JOIN livestreams l ON l.user_id = u.id
-		INNER JOIN reactions r ON r.livestream_id = l.id
-		WHERE u.id = ?`
-		if err := tx.GetContext(ctx, &reactions, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return 0, err
-		}
-
-		var tips int64
-		query = `
-		SELECT IFNULL(SUM(l2.tip), 0) FROM users u
-		INNER JOIN livestreams l ON l.user_id = u.id	
-		INNER JOIN livecomments l2 ON l2.livestream_id = l.id
-		WHERE u.id = ?`
-		if err := tx.GetContext(ctx, &tips, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return 0, err
-		}
-
-		score := reactions + tips
-		ranking = append(ranking, UserRankingEntry{
-			Username: user.Name,
-			Score:    score,
-		})
-	}
-	sort.Sort(ranking)
-
-	var rank int64 = 1
-	for i := len(ranking) - 1; i >= 0; i-- {
-		entry := ranking[i]
-		if entry.Username == username {
-			break
-		}
-		rank++
-	}
-
 	return rank, nil
+	}
 }
 
 func getUserStatisticsHandler(c echo.Context) error {
