@@ -92,7 +92,7 @@ func getIconHandler(c echo.Context) error {
 
 	username := c.Param("username")
 
-	if hash, ok := cache.usernameHash.Load(username); ok {
+	if hash, ok := cache.userImageHash.Load(username); ok {
 		hashGivenStr := c.Request().Header.Get("If-None-Match")
 		hashGiven := strings.Trim(hashGivenStr, "\"")
 
@@ -169,7 +169,7 @@ func postIconHandler(c echo.Context) error {
 	hash := fmt.Sprintf("%x", raw)
 
 	username := sess.Values[defaultUsernameKey].(string)
-	cache.usernameHash.Store(username, hash)
+	cache.userImageHash.Store(username, hash)
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
 		ID: iconID,
@@ -283,6 +283,7 @@ func registerHandler(c echo.Context) error {
 	}
 
 	cache.userTheme.Store(user.ID, user.Theme)
+	cache.userModel.Store(user.ID, userModel)
 
 	return c.JSON(http.StatusCreated, user)
 }
@@ -428,7 +429,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		cache.userTheme.Store(userModel.ID, theme)
 	}
 
-	hash, ok := cache.usernameHash.Load(userModel.ID)
+	hash, ok := cache.userImageHash.Load(userModel.ID)
 	if hash == nil || !ok {
 		var image []byte
 		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
@@ -440,7 +441,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		} else {
 			raw := sha256.Sum256(image)
 			hash = fmt.Sprintf("%x", raw)
-			cache.usernameHash.Store(userModel.ID, hash)
+			cache.userImageHash.Store(userModel.ID, hash)
 		}
 	}
 
