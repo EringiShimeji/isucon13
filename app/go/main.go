@@ -95,12 +95,13 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 		}
 		conf.ParseTime = parseTime
 	}
+	conf.InterpolateParams = true
 
 	db, err := sqlx.Open("mysql", conf.FormatDSN())
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(10)
+	db.SetMaxOpenConns(30)
 
 	if err := db.Ping(); err != nil {
 		return nil, err
