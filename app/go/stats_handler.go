@@ -213,15 +213,18 @@ func getUserStatisticsHandler(c echo.Context) error {
 func getLivestreamRank(ctx context.Context, tx *sqlx.Tx, livestreamID int64) (int64, error) {
 	var rank int64 = 1
 	if err := tx.GetContext(ctx, &rank, `
-		SELECT ROW_NUMBER() OVER (ORDER BY g.s DESC)
+		SELECT s2.n
 		FROM (
-			SELECT l.id AS id, COUNT(r.id) + IFNULL(SUM(l2.tip), 0) AS s
-			FROM livestreams l
-			LEFT JOIN reactions r ON l.id = r.livestream_id
-			LEFT JOIN livecomments l2 ON l.id = l2.livestream_id
-			GROUP BY l.id
-		) AS g
-		WHERE g.id = ?
+			SELECT s1.id AS id, ROW_NUMBER() OVER (ORDER BY s1.s DESC) AS n
+			FROM (
+				SELECT l.id AS id, COUNT(r.id) + IFNULL(SUM(l2.tip), 0) AS s
+				FROM livestreams l
+				LEFT JOIN reactions r ON l.id = r.livestream_id
+				LEFT JOIN livecomments l2 ON l.id = l2.livestream_id
+				GROUP BY l.id
+			) AS s1
+		) AS s2
+		WHERE s2.id = ?
 	`, livestreamID); err != nil {
 		return 0, err
 	}
