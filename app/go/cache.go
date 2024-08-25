@@ -40,7 +40,7 @@ func InitCache() error {
 	}
 
 	var livestreamModels []LivestreamModel
-	if err := dbConn.Select(&userModels, "SELECT * FROM livestreams"); err != nil {
+	if err := dbConn.Select(&livestreamModels, "SELECT * FROM livestreams"); err != nil {
 		return err
 	}
 	for _, model := range livestreamModels {
