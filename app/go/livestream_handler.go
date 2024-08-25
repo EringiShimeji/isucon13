@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -496,8 +495,8 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		return Livestream{}, err
 	}
 
-	var tags []Tag
-	if err := tx.SelectContext(ctx, &tags, `
+	var tagModels []TagModel
+	if err := tx.SelectContext(ctx, &tagModels, `
 		SELECT t.id AS id, t.name AS name
 		FROM livestream_tags AS lt
 		LEFT JOIN tags AS t ON lt.tag_id = t.id
@@ -505,8 +504,13 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 	`, livestreamModel.ID); err != nil {
 		return Livestream{}, err
 	}
-
-	log.Println("tags", tags)
+	tags := make([]Tag, len(tagModels))
+	for i := range tagModels {
+		tags[i] = Tag{
+			ID:   tagModels[i].ID,
+			Name: tagModels[i].Name,
+		}
+	}
 
 	livestream := Livestream{
 		ID:           livestreamModel.ID,
