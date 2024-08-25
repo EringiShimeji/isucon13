@@ -12,6 +12,14 @@ type Cache struct {
 
 var cache Cache
 
+func (c *Cache) getUserModel(userID int64) (UserModel, bool) {
+	userModel, ok := cache.userModel.Load(userID)
+	if userModel == nil {
+		return UserModel{}, ok
+	}
+	return userModel.(UserModel), ok
+}
+
 func InitCache() error {
 	var userModels []UserModel
 	if err := dbConn.Select(&userModels, "SELECT * FROM users"); err != nil {

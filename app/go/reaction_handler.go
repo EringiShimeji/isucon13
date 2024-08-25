@@ -142,8 +142,8 @@ func postReactionHandler(c echo.Context) error {
 }
 
 func fillReactionResponse(ctx context.Context, tx *sqlx.Tx, reactionModel ReactionModel) (Reaction, error) {
-	userModel, _ := cache.userModel.Load(reactionModel.UserID)
-	user, err := fillUserResponse(ctx, tx, userModel.(UserModel))
+	userModel, _ := cache.getUserModel(reactionModel.UserID)
+	user, err := fillUserResponse(ctx, tx, userModel)
 	if err != nil {
 		return Reaction{}, err
 	}
