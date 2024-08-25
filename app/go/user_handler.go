@@ -416,7 +416,16 @@ func verifyUserSession(c echo.Context) error {
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
 	theme, ok := cache.userTheme.Load(userModel.ID)
 	if !ok {
-		return User{}, fmt.Errorf("failed to get theme for user %s", userModel.Name)
+		// ユーザー作成の最後に呼ばれた場合は, キャッシュする前なので DB から取得
+		themeModel := ThemeModel{}
+		if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
+			return User{}, err
+		}
+		theme = Theme{
+			ID:       themeModel.ID,
+			DarkMode: themeModel.DarkMode,
+		}
+		cache.userTheme.Store(userModel.ID, theme)
 	}
 
 	hash, ok := cache.usernameHash.Load(userModel.ID)
