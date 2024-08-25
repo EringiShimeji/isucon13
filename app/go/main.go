@@ -131,6 +131,16 @@ func initializeHandler(c echo.Context) error {
 
 	InitCache()
 
+	ctx := c.Request().Context()
+	var userModels []UserModel
+	if err := dbConn.SelectContext(ctx, userModels, "SELECT * FROM users"); err != nil {
+		c.Logger().Warnf("init.sh failed with err=%s", err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
+	}
+	for _, model := range userModels {
+		cache.userModel.Store(model.ID, model)
+	}
+
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "golang",
