@@ -70,9 +70,9 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	conf.DBName = "isupipe"
 	conf.ParseTime = true
 
-	if v, ok := os.LookupEnv(networkTypeEnvKey); ok {
-		conf.Net = v
-	}
+	//if v, ok := os.LookupEnv(networkTypeEnvKey); ok {
+	//	conf.Net = v
+	//}
 	//if addr, ok := os.LookupEnv(addrEnvKey); ok {
 	//	if port, ok2 := os.LookupEnv(portEnvKey); ok2 {
 	//		conf.Addr = net.JoinHostPort(addr, port)
