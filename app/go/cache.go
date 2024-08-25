@@ -1,6 +1,8 @@
 package main
 
-import "sync"
+import (
+	"sync"
+)
 
 type Cache struct {
 	userImageHash sync.Map // username -> imageHash
@@ -10,5 +12,13 @@ type Cache struct {
 
 var cache Cache
 
-func InitCache() {
+func InitCache() error {
+	var userModels []UserModel
+	if err := dbConn.Select(&userModels, "SELECT * FROM users"); err != nil {
+		return err
+	}
+	for _, model := range userModels {
+		cache.userModel.Store(model.ID, model)
+	}
+	return nil
 }
