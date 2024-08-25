@@ -5,13 +5,22 @@ import (
 )
 
 type Cache struct {
-	userImageHash  sync.Map // username -> imageHash
-	userTheme      sync.Map // user_id -> theme
-	userModel      sync.Map // user_id -> UserModel
-	livestreamTags sync.Map // livestream_id -> tags
+	userImageHash   sync.Map // username -> imageHash
+	userTheme       sync.Map // user_id -> theme
+	userModel       sync.Map // user_id -> UserModel
+	livestreamTags  sync.Map // livestream_id -> tags
+	livestreamModel sync.Map // livestream_id -> LivestreamModel
 }
 
 var cache Cache
+
+func (c *Cache) getLivestreamModel(livestreamID int64) (LivestreamModel, bool) {
+	m, ok := cache.livestreamModel.Load(livestreamID)
+	if !ok {
+		return LivestreamModel{}, ok
+	}
+	return m.(LivestreamModel), ok
+}
 
 func (c *Cache) getUserModel(userID int64) (UserModel, bool) {
 	userModel, ok := cache.userModel.Load(userID)

@@ -188,12 +188,9 @@ func postLivecommentHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	var livestreamModel LivestreamModel
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusNotFound, "livestream not found")
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
-		}
+	livestreamModel, ok := cache.getLivestreamModel(int64(livestreamID))
+	if !ok {
+		return echo.NewHTTPError(http.StatusNotFound, "livestream not found")
 	}
 
 	// スパム判定
@@ -281,13 +278,8 @@ func reportLivecommentHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	var livestreamModel LivestreamModel
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusNotFound, "livestream not found")
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
-		}
+	if _, ok := cache.getLivestreamModel(int64(livestreamID)); !ok {
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot get stats of not found livestream")
 	}
 
 	var livecommentModel LivecommentModel
@@ -358,12 +350,8 @@ func moderateHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	// 配信者自身の配信に対するmoderateなのかを検証
-	var ownedLivestreams []LivestreamModel
-	if err := tx.SelectContext(ctx, &ownedLivestreams, "SELECT * FROM livestreams WHERE id = ? AND user_id = ?", livestreamID, userID); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
-	}
-	if len(ownedLivestreams) == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, "A streamer can't moderate livestreams that other streamers own")
+	if l, ok := cache.getLivestreamModel(int64(livestreamID)); !ok || l.UserID != userID {
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot get stats of not found livestream")
 	}
 
 	rs, err := tx.NamedExecContext(ctx, "INSERT INTO ng_words(user_id, livestream_id, word, created_at) VALUES (:user_id, :livestream_id, :word, :created_at)", &NGWord{
@@ -429,10 +417,7 @@ func fillLivecommentResponse(ctx context.Context, tx *sqlx.Tx, livecommentModel 
 		return Livecomment{}, err
 	}
 
-	livestreamModel := LivestreamModel{}
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livecommentModel.LivestreamID); err != nil {
-		return Livecomment{}, err
-	}
+	livestreamModel, _ := cache.getLivestreamModel(livecommentModel.LivestreamID)
 	livestream, err := fillLivestreamResponse(ctx, tx, livestreamModel)
 	if err != nil {
 		return Livecomment{}, err

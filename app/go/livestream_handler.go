@@ -199,10 +199,7 @@ func searchLivestreamsHandler(c echo.Context) error {
 		}
 
 		for _, keyTaggedLivestream := range keyTaggedLivestreams {
-			ls := LivestreamModel{}
-			if err := tx.GetContext(ctx, &ls, "SELECT * FROM livestreams WHERE id = ?", keyTaggedLivestream.LivestreamID); err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
-			}
+			ls, _ := cache.getLivestreamModel(keyTaggedLivestream.LivestreamID)
 
 			livestreamModels = append(livestreamModels, &ls)
 		}
@@ -411,13 +408,9 @@ func getLivestreamHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	livestreamModel := LivestreamModel{}
-	err = tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID)
-	if errors.Is(err, sql.ErrNoRows) {
+	livestreamModel, ok := cache.getLivestreamModel(int64(livestreamID))
+	if !ok {
 		return echo.NewHTTPError(http.StatusNotFound, "not found livestream that has the given id")
-	}
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
 	}
 
 	livestream, err := fillLivestreamResponse(ctx, tx, livestreamModel)
@@ -450,10 +443,7 @@ func getLivecommentReportsHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	var livestreamModel LivestreamModel
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
-	}
+	livestreamModel, _ := cache.getLivestreamModel(int64(livestreamID))
 
 	// error already check
 	sess, _ := session.Get(defaultSessionIDKey, c)
