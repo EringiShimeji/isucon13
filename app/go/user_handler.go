@@ -414,7 +414,10 @@ func verifyUserSession(c echo.Context) error {
 }
 
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
-	theme, _ := cache.userTheme.Load(userModel.ID)
+	theme, ok := cache.userTheme.Load(userModel.ID)
+	if !ok {
+		return User{}, fmt.Errorf("failed to get theme for user %s", userModel.Name)
+	}
 
 	hash, ok := cache.usernameHash.Load(userModel.ID)
 	if hash == nil || !ok {
