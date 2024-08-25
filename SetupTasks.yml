@@ -11,7 +11,7 @@ vars:
     /etc/mysql
     /etc/nginx
     /etc/sysctl.d
-  COLLECT_TARGET_SERVICE: mysql nginx isupipe-go
+  COLLECT_TARGET_SERVICE: mysql nginx isupipe-go pdns
 
   # Rarely changed
   CMD_INSTALL_DIR: /usr/local/bin
