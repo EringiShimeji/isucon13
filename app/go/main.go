@@ -149,6 +149,8 @@ func main() {
 	e.Use(session.Middleware(cookieStore))
 	// e.Use(middleware.Recover())
 
+	e.JSONSerializer = &fastJSONSerializer{}
+
 	// 初期化
 	e.POST("/api/initialize", initializeHandler)
 
