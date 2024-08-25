@@ -57,8 +57,8 @@ max_connections = 1000
 innodb_buffer_pool_size = 2G
 
 # 一時テーブルのサイズ上限
-tmp_table_size = 64M
-max_heap_table_size = 64
+tmp_table_size = 256M
+max_heap_table_size = 256M
 
 # 大きいと flush を遅らせられる
 innodb_log_file_size = 128M
