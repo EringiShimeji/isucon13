@@ -213,7 +213,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 func getLivestreamRank(ctx context.Context, tx *sqlx.Tx, livestreamID int64) (int64, error) {
 	var rank int64 = 1
 	if err := tx.GetContext(ctx, &rank, `
-		SELECT s2.n, s2.s
+		SELECT s2.n
 		FROM (
 			SELECT s1.id AS id, ROW_NUMBER() OVER (ORDER BY s1.s DESC, s1.id DESC) AS n, s1.s AS s
 			FROM (
