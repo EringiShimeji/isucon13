@@ -495,21 +495,9 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		return Livestream{}, err
 	}
 
-	var tagModels []TagModel
-	if err := tx.SelectContext(ctx, &tagModels, `
-		SELECT t.id AS id, t.name AS name
-		FROM livestream_tags AS lt
-		LEFT JOIN tags AS t ON lt.tag_id = t.id
-		WHERE lt.livestream_id = ?
-	`, livestreamModel.ID); err != nil {
+	tags, err := getLivestreamTags(ctx, tx, livestreamModel.ID)
+	if err != nil {
 		return Livestream{}, err
-	}
-	tags := make([]Tag, len(tagModels))
-	for i := range tagModels {
-		tags[i] = Tag{
-			ID:   tagModels[i].ID,
-			Name: tagModels[i].Name,
-		}
 	}
 
 	livestream := Livestream{
@@ -524,4 +512,29 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		EndAt:        livestreamModel.EndAt,
 	}
 	return livestream, nil
+}
+
+func getLivestreamTags(ctx context.Context, tx *sqlx.Tx, livestreamID int64) ([]Tag, error) {
+	tags, ok := cache.livestreamTags.Load(livestreamID)
+	if !ok {
+		var tagModels []TagModel
+		if err := tx.SelectContext(ctx, &tagModels, `
+			SELECT t.id AS id, t.name AS name
+			FROM livestream_tags AS lt
+			LEFT JOIN tags AS t ON lt.tag_id = t.id
+			WHERE lt.livestream_id = ?
+		`, livestreamID); err != nil {
+			return nil, err
+		}
+		tags = make([]Tag, len(tagModels))
+		for i := range tagModels {
+			tags.([]Tag)[i] = Tag{
+				ID:   tagModels[i].ID,
+				Name: tagModels[i].Name,
+			}
+		}
+		cache.livestreamTags.Store(livestreamID, tags)
+	}
+
+	return tags.([]Tag), nil
 }
