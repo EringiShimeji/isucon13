@@ -133,7 +133,7 @@ func initializeHandler(c echo.Context) error {
 
 	ctx := c.Request().Context()
 	var userModels []UserModel
-	if err := dbConn.SelectContext(ctx, userModels, "SELECT * FROM users"); err != nil {
+	if err := dbConn.SelectContext(ctx, &userModels, "SELECT * FROM users"); err != nil {
 		c.Logger().Warnf("init.sh failed with err=%s", err.Error())
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
